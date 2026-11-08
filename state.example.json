@@ -1,0 +1,16 @@
+{
+  "account": {
+    "id": "YOUR_USER_ID",
+    "username": "your_handle",
+    "name": "Your Display Name",
+    "followers_count": 0
+  },
+  "baseline_at": "2026-11-08T00:00:00+08:00",
+  "follower_ids": [],
+  "followers": [],
+  "new_followers": [],
+  "toast_queue": [],
+  "daily": {"date": "2026-11-08", "count": 0, "names": []},
+  "tribute_log": [],
+  "last_check_at": null
+}
