@@ -42,8 +42,8 @@ CANVAS_W, CANVAS_H = W + SHADOW * 2, H + SHADOW * 2
 POLL_SEC = 3.0
 KEY = "#010101"
 
-# Hover panel — wide enough for avatar, name, two icon buttons, and the 上供 pill.
-PANEL_W = 320
+# Hover panel
+PANEL_W = 300
 PANEL_GAP = 8
 PANEL_RADIUS = 14
 TITLE_H = 36
@@ -61,9 +61,9 @@ def ensure_state() -> dict[str, Any]:
     if not STATE_PATH.exists():
         data = {
             "account": {
-                "username": "your_handle",
-                "name": "Your Display Name",
-                "followers_count": 0,
+                "username": "tcblue001",
+                "name": "蓝小生e版✨",
+                "followers_count": 69,
             },
             "follower_ids": [],
             "followers": [],
@@ -195,101 +195,6 @@ def _blend_white(rgb: tuple[int, int, int], amount: float) -> tuple[int, int, in
 
 
 _X_BADGE_CACHE: Image.Image | None = None
-_ROW_ICON_CACHE: dict[str, Image.Image] = {}
-ICON_BOX = 28
-_PANEL_BG = (0x15, 0x20, 0x2B, 255)
-_ICON_FACE = (0x25, 0x33, 0x41, 255)
-_ICON_EDGE = (0x38, 0x44, 0x4D, 255)
-
-
-def _x_mark_glyph(size: int = 16) -> Image.Image:
-    """Official X mark, black knocked out, scaled to the icon button."""
-    for name in ("x-mark-alpha.png", "x-mark-white.png", "logo-white.png"):
-        path = ASSETS_DIR / name
-        if not path.exists():
-            continue
-        raw = Image.open(path).convert("RGBA")
-        bbox = raw.getbbox()
-        if not bbox:
-            continue
-        return raw.crop(bbox).resize((size, size), Image.Resampling.LANCZOS)
-    glyph = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(glyph)
-    m = max(1, size // 8)
-    draw.line((m, m, size - m, size - m), fill=(255, 255, 255, 255), width=max(2, size // 6))
-    draw.line((size - m, m, m, size - m), fill=(255, 255, 255, 255), width=max(2, size // 6))
-    return glyph
-
-
-def _follow_glyph(size: int = 22) -> Image.Image:
-    """Person + plus, white on transparent with an X-blue plus badge."""
-    scale = 8
-    s = size * scale
-    im = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
-    white = (255, 255, 255, 255)
-    head_r = int(s * 0.15)
-    head = (int(s * 0.34), int(s * 0.30))
-    draw.ellipse(
-        (head[0] - head_r, head[1] - head_r, head[0] + head_r, head[1] + head_r),
-        fill=white,
-    )
-    body_w = int(s * 0.28)
-    draw.rounded_rectangle(
-        (head[0] - body_w, int(s * 0.50), head[0] + body_w, int(s * 0.98)),
-        radius=int(s * 0.16),
-        fill=white,
-    )
-    br = int(s * 0.20)
-    badge = (int(s * 0.74), int(s * 0.68))
-    draw.ellipse(
-        (badge[0] - br, badge[1] - br, badge[0] + br, badge[1] + br),
-        fill=(0x1D, 0x9B, 0xF0, 255),
-    )
-    thickness = max(8, int(s * 0.05))
-    arm = int(s * 0.10)
-    draw.rectangle(
-        (badge[0] - thickness // 2, badge[1] - arm, badge[0] + thickness // 2, badge[1] + arm),
-        fill=white,
-    )
-    draw.rectangle(
-        (badge[0] - arm, badge[1] - thickness // 2, badge[0] + arm, badge[1] + thickness // 2),
-        fill=white,
-    )
-    return im.resize((size, size), Image.Resampling.LANCZOS)
-
-
-def _icon_plate(glyph: Image.Image, box: int = ICON_BOX) -> Image.Image:
-    """Rounded chip on the panel color so the glyph stays readable on #15202B."""
-    im = Image.new("RGBA", (box, box), _PANEL_BG)
-    draw = ImageDraw.Draw(im)
-    draw.rounded_rectangle((0, 0, box - 1, box - 1), radius=8, fill=_ICON_FACE, outline=_ICON_EDGE)
-    ox = (box - glyph.width) // 2
-    oy = (box - glyph.height) // 2
-    im.paste(glyph, (ox, oy), glyph)
-    return im
-
-
-def _row_icon(kind: str) -> Image.Image:
-    cached = _ROW_ICON_CACHE.get(kind)
-    if cached is not None:
-        return cached.copy()
-    if kind == "open":
-        im = _icon_plate(_x_mark_glyph(16))
-    else:
-        im = _icon_plate(_follow_glyph(22))
-    _ROW_ICON_CACHE[kind] = im
-    return im.copy()
-
-
-def _ellipsize_px(text: str, font, max_w: int) -> str:
-    if max_w < 12 or font.measure(text) <= max_w:
-        return text
-    ell = "…"
-    trimmed = text
-    while trimmed and font.measure(trimmed + ell) > max_w:
-        trimmed = trimmed[:-1]
-    return (trimmed + ell) if trimmed else ell
 
 
 def _load_x_badge(size: int = 28) -> Image.Image:
@@ -540,6 +445,113 @@ def _placeholder_avatar() -> Image.Image:
         (0, 0, AVATAR_SZ - 1, AVATAR_SZ - 1), fill=(56, 68, 77, 255)  # #38444D
     )
     return im
+
+
+
+_ICON_CACHE: dict[str, Image.Image] = {}
+
+
+def _load_icon_asset(name: str, size: int = 28) -> Image.Image | None:
+    """Load a baked icon from assets/; resize if needed."""
+    key = f"{name}@{size}"
+    if key in _ICON_CACHE:
+        return _ICON_CACHE[key].copy()
+    p = ASSETS_DIR / name
+    if not p.exists():
+        return None
+    im = Image.open(p).convert("RGBA")
+    if im.size != (size, size):
+        im = im.resize((size, size), Image.Resampling.LANCZOS)
+    _ICON_CACHE[key] = im
+    return im.copy()
+
+
+def _draw_follow_glyph(size: int = 28, *, bg: tuple, fg: tuple = (255, 255, 255, 255)) -> Image.Image:
+    """Person + plus follow icon (Pillow fallback when asset missing)."""
+    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.ellipse((0, 0, size - 1, size - 1), fill=bg)
+    # scale coords from 28px design
+    s = size / 28.0
+    def sc(*vals):
+        return tuple(int(round(v * s)) for v in vals)
+    d.ellipse(sc(5, 5, 13, 13), fill=fg)
+    d.ellipse(sc(3, 13, 15, 21), fill=fg)
+    d.polygon([sc(3, 22), sc(4, 15), sc(14, 15), sc(15, 22)], fill=fg)
+    d.ellipse(sc(14, 12, 26, 24), fill=bg)  # clear plus pad
+    d.rectangle(sc(15, 16, 25, 19), fill=fg)
+    d.rectangle(sc(18, 13, 21, 22), fill=fg)
+    return im
+
+
+def _draw_open_x_glyph(size: int = 28, *, bg: tuple, outline: tuple | None = None) -> Image.Image:
+    """Official X mark on rounded square (Pillow fallback)."""
+    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    rad = max(6, int(round(size * 8 / 28)))
+    d.rounded_rectangle(
+        (0, 0, size - 1, size - 1),
+        radius=rad,
+        fill=bg,
+        outline=outline,
+        width=1 if outline else 0,
+    )
+    mark: Image.Image | None = None
+    for name in ("x-mark-alpha.png", "x-mark-white.png", "logo-white.png"):
+        p = ASSETS_DIR / name
+        if not p.exists():
+            continue
+        raw = Image.open(p)
+        if raw.mode == "L":
+            rgba = Image.new("RGBA", raw.size, (0, 0, 0, 0))
+            px, op = raw.load(), rgba.load()
+            for y in range(raw.height):
+                for x in range(raw.width):
+                    v = px[x, y]
+                    if v > 40:
+                        op[x, y] = (255, 255, 255, int(v))
+            mark = rgba
+        else:
+            raw = raw.convert("RGBA")
+            px = raw.load()
+            out = Image.new("RGBA", raw.size, (0, 0, 0, 0))
+            op = out.load()
+            for y in range(raw.height):
+                for x in range(raw.width):
+                    r, g, b, a = px[x, y]
+                    lum = (r + g + b) / 3
+                    if lum > 40 and a > 10:
+                        op[x, y] = (255, 255, 255, max(a, int(lum)))
+            mark = out
+        break
+    if mark is not None:
+        bbox = mark.getbbox() or (0, 0, mark.width, mark.height)
+        cropped = mark.crop(bbox)
+        content = max(10, int(round(size * 13 / 28)))
+        cropped = cropped.resize((content, content), Image.Resampling.LANCZOS)
+        im.paste(cropped, ((size - content) // 2, (size - content) // 2), cropped)
+    return im
+
+
+def icon_open_x(hover: bool = False, size: int = 28) -> Image.Image:
+    name = "icon-open-x-hover.png" if hover else "icon-open-x.png"
+    baked = _load_icon_asset(name, size)
+    if baked is not None:
+        return baked
+    if hover:
+        return _draw_open_x_glyph(size, bg=(29, 155, 240, 255))
+    return _draw_open_x_glyph(size, bg=(21, 32, 43, 255), outline=(29, 155, 240, 255))
+
+
+def icon_follow(hover: bool = False, size: int = 28) -> Image.Image:
+    name = "icon-follow-hover.png" if hover else "icon-follow.png"
+    baked = _load_icon_asset(name, size)
+    if baked is not None:
+        return baked
+    if hover:
+        return _draw_follow_glyph(size, bg=(20, 130, 210, 255))
+    return _draw_follow_glyph(size, bg=(29, 155, 240, 255))
+
 
 
 class ThinScrollbar(tk.Canvas):
@@ -1029,24 +1041,18 @@ class FanBallApp:
         pw = PANEL_W
         bx = self.root.winfo_x() + SHADOW
         by = self.root.winfo_y() + SHADOW
-        sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         y = by + H + PANEL_GAP
         if y + ph > sh - 8:
             y = by - PANEL_GAP - ph
         if y < 8:
             y = 8
-        # Default capsule sits on the right edge; keep the wider panel on screen.
-        x = bx
-        if x + pw > sw - 8:
-            x = max(8, sw - pw - 8)
-        win.geometry(f"{pw}x{ph}+{x}+{y}")
+        win.geometry(f"{pw}x{ph}+{bx}+{y}")
 
     def _show_followers_panel(self) -> None:
         if self._dragging:
             return
         self._cancel_hover_jobs()
-        self._row_text = []
         followers = list(self.state.get("followers") or [])
         if self.followers_win is not None:
             try:
@@ -1172,7 +1178,6 @@ class FanBallApp:
         self.followers_win = win
         self._panel_alive = True
         self._position_panel()
-        self._refit_row_text()
         win.lift()
         # background-prefetch a few avatars then refresh panel quietly
         self.root.after(50, lambda: self._prefetch_avatars(followers[:12]))
@@ -1199,42 +1204,39 @@ class FanBallApp:
         lbl.bind("<Leave>", self._on_panel_leave)
         return lbl
 
-    def _icon_btn(self, parent: tk.Misc, kind: str, command) -> tk.Label:
-        photo = ImageTk.PhotoImage(_row_icon(kind))
-        self._panel_photos.append(photo)
-        lbl = tk.Label(
-            parent,
-            image=photo,
-            bg="#15202B",
-            bd=0,
-            cursor="hand2",
-            highlightthickness=0,
-        )
-        lbl.bind("<Button-1>", lambda _e: command())
-        lbl.bind("<Enter>", self._on_panel_enter)
-        lbl.bind("<Leave>", self._on_panel_leave)
-        return lbl
+    def _icon_btn(self, parent: tk.Misc, *, kind: str, command) -> tk.Label:
+        """28×28 image icon button with hover swap; keeps hover panel alive."""
+        if kind == "open_x":
+            im_n, im_h = icon_open_x(False), icon_open_x(True)
+        elif kind == "follow":
+            im_n, im_h = icon_follow(False), icon_follow(True)
+        else:
+            raise ValueError(kind)
+        ph_n = ImageTk.PhotoImage(im_n)
+        ph_h = ImageTk.PhotoImage(im_h)
+        self._panel_photos.extend([ph_n, ph_h])
+        lbl = tk.Label(parent, image=ph_n, bg="#15202B", bd=0, cursor="hand2")
+        lbl._icon_normal = ph_n  # type: ignore[attr-defined]
+        lbl._icon_hover = ph_h  # type: ignore[attr-defined]
 
-    def _track_row_text(self, lbl: tk.Label, full: str) -> None:
-        self._row_text.append((lbl, full))
-
-    def _refit_row_text(self) -> None:
-        """Ellipsize name and handle to the width the row actually got."""
-        import tkinter.font as tkfont
-
-        try:
-            self.root.update_idletasks()
-        except Exception:
-            return
-        for lbl, full in getattr(self, "_row_text", []):
+        def on_enter(_e=None):
+            self._on_panel_enter()
             try:
-                width = int(lbl.winfo_width())
-                if width < 12:
-                    continue
-                font = tkfont.Font(font=lbl.cget("font"))
-                lbl.configure(text=_ellipsize_px(full, font, max(12, width - 2)))
+                lbl.configure(image=lbl._icon_hover)  # type: ignore[attr-defined]
             except Exception:
-                continue
+                pass
+
+        def on_leave(_e=None):
+            self._on_panel_leave()
+            try:
+                lbl.configure(image=lbl._icon_normal)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+
+        lbl.bind("<Enter>", on_enter)
+        lbl.bind("<Leave>", on_leave)
+        lbl.bind("<Button-1>", lambda _e: command())
+        return lbl
 
     def _build_follower_row(self, parent: tk.Frame, f: dict[str, Any]) -> None:
         row = tk.Frame(parent, bg="#15202B", height=ROW_H)
@@ -1247,21 +1249,24 @@ class FanBallApp:
         photo = ImageTk.PhotoImage(av_im)
         self._panel_photos.append(photo)
         av = tk.Label(row, image=photo, bg="#15202B", bd=0)
-        av.pack(side="left", padx=(0, 8), pady=((ROW_H - AVATAR_SZ) // 2, 0))
+        av.pack(side="left", padx=(0, 8))
 
-        # Buttons first (right) so the name uses the remaining width.
+        # Buttons first (right) so name gets remaining width:
+        # [X icon] [follow icon] [上供 text]
         uname = str(f.get("username") or "")
         name = str(f.get("name") or uname)
         btn_col = tk.Frame(row, bg="#15202B")
-        btn_col.pack(side="right", padx=(6, 0), pady=((ROW_H - ICON_BOX) // 2, 0))
+        btn_col.pack(side="right", padx=(4, 0))
         open_btn = self._icon_btn(
-            btn_col, "open",
-            lambda u=uname: webbrowser.open(f"https://x.com/{u}"),
+            btn_col,
+            kind="open_x",
+            command=lambda u=uname: webbrowser.open(f"https://x.com/{u}"),
         )
-        open_btn.pack(side="left", padx=(0, 6))
+        open_btn.pack(side="left", padx=(0, 4))
         follow_btn = self._icon_btn(
-            btn_col, "follow",
-            lambda u=uname: webbrowser.open(
+            btn_col,
+            kind="follow",
+            command=lambda u=uname: webbrowser.open(
                 f"https://x.com/intent/follow?screen_name={u}"
             ),
         )
@@ -1275,20 +1280,21 @@ class FanBallApp:
 
         text_col = tk.Frame(row, bg="#15202B")
         text_col.pack(side="left", fill="both", expand=True)
-        name_lbl = tk.Label(
-            text_col, text=name, bg="#15202B", fg="#FFFFFF",
+        # Truncate — icons free ~40px vs three text pills, allow longer names
+        disp = name if len(name) <= 10 else name[:10] + "…"
+        tk.Label(
+            text_col, text=disp, bg="#15202B", fg="#FFFFFF",
             font=_tk_font(12, True), anchor="w",
-        )
-        name_lbl.pack(fill="x", anchor="w", pady=(8, 0))
-        handle_lbl = tk.Label(
-            text_col, text=f"@{uname}", bg="#15202B", fg="#8B98A5",
+        ).pack(fill="x", anchor="w", pady=(6, 0))
+        handle = f"@{uname}"
+        if len(handle) > 16:
+            handle = handle[:15] + "…"
+        tk.Label(
+            text_col, text=handle, bg="#15202B", fg="#8B98A5",
             font=_tk_font(11, False), anchor="w",
-        )
-        handle_lbl.pack(fill="x", anchor="w")
-        self._track_row_text(name_lbl, name)
-        self._track_row_text(handle_lbl, f"@{uname}")
+        ).pack(fill="x", anchor="w")
 
-        for w in (row, text_col, btn_col, av, name_lbl, handle_lbl):
+        for w in (row, text_col, btn_col, av):
             w.bind("<Enter>", self._on_panel_enter)
             w.bind("<Leave>", self._on_panel_leave)
 
